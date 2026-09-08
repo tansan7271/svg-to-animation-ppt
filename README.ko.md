@@ -40,8 +40,8 @@ GUI를 쓰면 SVG를 드롭하고, path 순서를 드래그로 바꾸고, 슬라
 ## 설치
 
 ```bash
-git clone https://github.com/<you>/svg2inkppt.git
-cd svg2inkppt
+git clone https://github.com/tansan7271/svg-to-animation-ppt.git
+cd svg-to-animation-ppt
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```

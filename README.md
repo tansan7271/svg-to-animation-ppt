@@ -45,8 +45,8 @@ Or use the GUI: drop the SVG, reorder the paths by dragging, tune the sliders, c
 ## Install
 
 ```bash
-git clone https://github.com/<you>/svg2inkppt.git
-cd svg2inkppt
+git clone https://github.com/tansan7271/svg-to-animation-ppt.git
+cd svg-to-animation-ppt
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
