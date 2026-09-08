@@ -1,4 +1,4 @@
-# svg2inkppt
+# svg-to-animation-ppt
 
 **Turn an SVG into a PowerPoint slide where the logo draws itself, stroke by stroke.**
 
@@ -12,7 +12,7 @@ sequence it with other effects, copy it into another deck, present it anywhere P
 runs. No add-in, no macros, nothing to install on the presenting machine.
 
 ```
-python svg2inkppt.py logo.svg --duration 3 --ease-in 0.2 --ease-out 0.3
+python svg_to_animation_ppt.py logo.svg --duration 3 --ease-in 0.2 --ease-out 0.3
 ```
 
 Or use the GUI: drop the SVG, reorder the paths by dragging, tune the sliders, click *Done*.
@@ -54,9 +54,9 @@ python3 -m venv .venv
 ## CLI
 
 ```bash
-.venv/bin/python svg2inkppt.py logo.svg                      # -> logo.pptx
-.venv/bin/python svg2inkppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
-.venv/bin/python svg2inkppt.py logo.svg --template deck.pptx # append a slide to deck.pptx
+.venv/bin/python svg_to_animation_ppt.py logo.svg                      # -> logo.pptx
+.venv/bin/python svg_to_animation_ppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
+.venv/bin/python svg_to_animation_ppt.py logo.svg --template deck.pptx # append a slide to deck.pptx
 ```
 
 | Option | Meaning | Default |
@@ -78,7 +78,7 @@ From Python:
 
 ```python
 from pathlib import Path
-import svg2inkppt as core
+import svg_to_animation_ppt as core
 
 opt = core.ConvertOptions(duration=3, ease_in=0.2, ease_out=0.3,
                           path_order=[2, 0, 1], reversed_paths={1})
@@ -87,7 +87,7 @@ core.convert(Path("logo.svg"), Path("logo.pptx"), opt)
 
 ## GUI (macOS)
 
-Double-click `SVG2PPT.app`. It must stay inside the project folder because it launches
+Double-click `SVG to Animation PPT.app`. It must stay inside the project folder because it launches
 `.venv/bin/python app.py` relative to itself. From a terminal: `.venv/bin/python app.py`.
 
 1. Drop an SVG on the window (or click to browse).
@@ -98,7 +98,7 @@ Double-click `SVG2PPT.app`. It must stay inside the project folder because it la
    colour, split mode, template deck.
 5. Click **Done**, choose where to save, and the deck opens in PowerPoint.
 
-Errors are logged to `/tmp/svg2ppt.log`.
+Errors are logged to `/tmp/svg-to-animation-ppt.log`.
 
 ## How it works
 
@@ -137,12 +137,16 @@ Things that were established by testing and are easy to get wrong:
 ## Project layout
 
 ```
-svg2inkppt.py    core + CLI
-app.py           Tkinter GUI
-SVG2PPT.app      macOS launcher (shell script bundle, no Python inside)
-examples/        sample SVGs
-internal/        dev-only decks and test outputs (git-ignored)
+svg_to_animation_ppt.py   core + CLI
+app.py                    Tkinter GUI
+SVG to Animation PPT.app  macOS launcher (shell script bundle, no Python inside)
+examples/                 sample SVGs
+internal/                 dev-only decks and test outputs (git-ignored)
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ## Contributing
 

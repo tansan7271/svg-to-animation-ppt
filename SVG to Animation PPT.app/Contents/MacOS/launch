@@ -1,0 +1,6 @@
+#!/bin/zsh
+# 앱 번들은 프로젝트 폴더 안에 있어야 한다: <project>/SVG to Animation PPT.app
+PROJ="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$PROJ"
+ARCH="$(uname -m)"
+exec arch "-$ARCH" "$PROJ/.venv/bin/python" "$PROJ/app.py" >> /tmp/svg-to-animation-ppt.log 2>&1

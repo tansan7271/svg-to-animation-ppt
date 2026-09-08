@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""svg2inkppt GUI: SVG 를 드래그 앤 드롭 → 옵션 조절 → 잉크 재생 애니메이션 pptx 생성."""
+"""svg-to-animation-ppt GUI: SVG 를 드래그 앤 드롭 → 옵션 조절 → 잉크 재생 애니메이션 pptx 생성."""
 from __future__ import annotations
 
 import subprocess
@@ -20,7 +20,7 @@ except Exception:  # pragma: no cover
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import svg2inkppt as core  # noqa: E402
+import svg_to_animation_ppt as core  # noqa: E402
 
 PREVIEW_W, PREVIEW_H = 520, 260
 LIST_W = 34
@@ -29,7 +29,7 @@ LIST_W = 34
 class App:
     def __init__(self, root):
         self.root = root
-        root.title("SVG → PowerPoint 잉크 재생")
+        root.title("SVG to Animation PPT")
         root.resizable(False, False)
         self.svg_path: Path | None = None
         self.template_path: Path | None = None

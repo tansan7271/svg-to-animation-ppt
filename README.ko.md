@@ -1,4 +1,4 @@
-# svg2inkppt
+# svg-to-animation-ppt
 
 **SVG 로고를 넣으면, 슬라이드 쇼에서 획이 하나씩 그려지는 PowerPoint 파일이 나옵니다.**
 
@@ -11,7 +11,7 @@ PowerPoint에는 도형의 path를 따라 선이 그려지는 애니메이션이
 복사해도 되고, PowerPoint만 있으면 어디서든 재생됩니다. 애드인도 매크로도 필요 없습니다.
 
 ```
-python svg2inkppt.py logo.svg --duration 3 --ease-in 0.2 --ease-out 0.3
+python svg_to_animation_ppt.py logo.svg --duration 3 --ease-in 0.2 --ease-out 0.3
 ```
 
 GUI를 쓰면 SVG를 드롭하고, path 순서를 드래그로 바꾸고, 슬라이더를 조절한 뒤 완료만 누르면 됩니다.
@@ -49,9 +49,9 @@ python3 -m venv .venv
 ## CLI
 
 ```bash
-.venv/bin/python svg2inkppt.py logo.svg                      # -> logo.pptx
-.venv/bin/python svg2inkppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
-.venv/bin/python svg2inkppt.py logo.svg --template deck.pptx # deck.pptx 마지막에 슬라이드 추가
+.venv/bin/python svg_to_animation_ppt.py logo.svg                      # -> logo.pptx
+.venv/bin/python svg_to_animation_ppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
+.venv/bin/python svg_to_animation_ppt.py logo.svg --template deck.pptx # deck.pptx 마지막에 슬라이드 추가
 ```
 
 | 옵션 | 의미 | 기본값 |
@@ -73,7 +73,7 @@ Python에서:
 
 ```python
 from pathlib import Path
-import svg2inkppt as core
+import svg_to_animation_ppt as core
 
 opt = core.ConvertOptions(duration=3, ease_in=0.2, ease_out=0.3,
                           path_order=[2, 0, 1], reversed_paths={1})
@@ -82,7 +82,7 @@ core.convert(Path("logo.svg"), Path("logo.pptx"), opt)
 
 ## GUI (macOS)
 
-`SVG2PPT.app`을 더블클릭합니다. 이 앱은 자기 위치를 기준으로 `.venv/bin/python app.py`를
+`SVG to Animation PPT.app`을 더블클릭합니다. 이 앱은 자기 위치를 기준으로 `.venv/bin/python app.py`를
 실행하므로 프로젝트 폴더 안에 있어야 합니다. 터미널에서는 `.venv/bin/python app.py`.
 
 1. 창에 SVG를 드롭합니다 (또는 클릭해서 선택).
@@ -93,7 +93,7 @@ core.convert(Path("logo.svg"), Path("logo.pptx"), opt)
    템플릿 덱을 조절합니다.
 5. **완료**를 누르고 저장 위치를 고르면 PowerPoint로 열립니다.
 
-오류 로그는 `/tmp/svg2ppt.log`에 남습니다.
+오류 로그는 `/tmp/svg-to-animation-ppt.log`에 남습니다.
 
 ## 동작 원리
 
@@ -127,12 +127,16 @@ pptx는 펜 획을 InkML 파트(`ppt/ink/inkN.xml`)로 저장하고, 슬라이�
 ## 구성
 
 ```
-svg2inkppt.py    코어 + CLI
-app.py           Tkinter GUI
-SVG2PPT.app      macOS 실행 번들 (셸 스크립트만 있고 Python은 들어있지 않음)
-examples/        예제 SVG
-internal/        개발용 덱과 테스트 출력물 (git 무시)
+svg_to_animation_ppt.py   코어 + CLI
+app.py                    Tkinter GUI
+SVG to Animation PPT.app  macOS 실행 번들 (셸 스크립트만 있고 Python은 들어있지 않음)
+examples/                 예제 SVG
+internal/                 개발용 덱과 테스트 출력물 (git 무시)
 ```
+
+## 라이선스
+
+MIT. [LICENSE](LICENSE) 참고.
 
 ## 기여
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""svg2inkppt: SVG 파일을 PowerPoint 잉크(Ink) 개체로 변환하고 '재생' 애니메이션을 붙인다.
+"""svg-to-animation-ppt: SVG 파일을 PowerPoint 잉크(Ink) 개체로 변환하고 '재생' 애니메이션을 붙인다.
 
 사용법:
-    python svg2inkppt.py logo.svg                      # logo.pptx 생성
-    python svg2inkppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
+    python svg_to_animation_ppt.py logo.svg                      # logo.pptx 생성
+    python svg_to_animation_ppt.py logo.svg -o out.pptx --width-cm 12 --duration 3
 
 동작 원리:
     SVG의 path/rect/circle/polyline 등을 점열로 샘플링해 InkML <trace>로 만들고,
