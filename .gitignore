@@ -1,0 +1,17 @@
+# internal / dev-only artifacts (hand-drawn reference decks, test outputs)
+internal/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# generated outputs
+*.pptx
+*.preview*.png
+
+# PowerPoint lock files
+~$*
+
+# macOS
+.DS_Store

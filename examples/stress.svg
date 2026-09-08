@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="220" viewBox="0 0 600 220">
+  <!-- 진짜 물방울 (뾰족한 꼭짓점 + 둥근 바닥) -->
+  <path d="M60,20 C60,20 110,90 110,130 A50,50 0 1,1 10,130 C10,90 60,20 60,20 Z" fill="#3498DB"/>
+  <!-- 별 (날카로운 코너 10개) -->
+  <polygon points="200,15 215,65 268,65 225,95 240,145 200,115 160,145 175,95 132,65 185,65" fill="none" stroke="#8E44AD" stroke-width="5" stroke-linejoin="miter"/>
+  <!-- 도넛: 구멍 뚫린 compound path (evenodd) -->
+  <path d="M380,80 m-55,0 a55,55 0 1,0 110,0 a55,55 0 1,0 -110,0 M380,80 m-25,0 a25,25 0 1,1 50,0 a25,25 0 1,1 -50,0" fill="#E67E22" fill-rule="evenodd"/>
+  <!-- 글자 모양 'k' 필기체 느낌 + 아주 작은 원 -->
+  <path d="M470,30 L470,150 M470,100 L530,40 M480,95 L540,150" fill="none" stroke="#2C3E50" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="560" cy="40" r="6" fill="#C0392B"/>
+  <!-- 얇은 지그재그 -->
+  <polyline points="20,200 60,170 100,200 140,170 180,200 220,170" fill="none" stroke="#16A085" stroke-width="2"/>
+</svg>

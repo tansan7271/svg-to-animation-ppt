@@ -1,0 +1,5 @@
+python-pptx>=1.0
+svgelements>=1.9
+pillow>=10.1
+lxml>=5
+tkinterdnd2>=0.4   # GUI drag & drop (optional for CLI)

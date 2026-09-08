@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <!-- 끊긴 path 두 개 (M 두 번) -->
+  <path d="M20,150 C60,20 100,20 140,150 M40,100 L120,100" fill="none" stroke="#1F4E79" stroke-width="8" stroke-linecap="round"/>
+  <!-- 원 (fill만 있음 -> 외곽선으로 그림) -->
+  <circle cx="200" cy="100" r="50" fill="#E74C3C"/>
+  <!-- 변환된 그룹 안의 사각형 + 꺾은선 -->
+  <g transform="translate(260,40) rotate(15)">
+    <rect x="0" y="0" width="90" height="60" fill="none" stroke="#27AE60" stroke-width="6"/>
+    <polyline points="10,50 30,15 50,50 70,15" fill="none" stroke="#F39C12" stroke-width="5"/>
+  </g>
+</svg>
