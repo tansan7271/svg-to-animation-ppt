@@ -46,7 +46,7 @@ class App:
 
         # --- 드롭 영역 ---------------------------------------------------
         self.drop = tk.Label(
-            frm, text="여기에 SVG 를 드래그 앤 드롭\n또는 클릭해서 파일 선택",
+            frm, text="여기에 SVG 또는 펜으로 그린 pptx 를 드래그 앤 드롭\n또는 클릭해서 파일 선택",
             relief="ridge", bd=2, width=64, height=5, bg="#F4F6F8", fg="#555", cursor="hand2",
         )
         self.drop.grid(row=0, column=0, columnspan=4, sticky="ew", pady=(0, 8))
@@ -138,9 +138,16 @@ class App:
         ttk.Label(cf, text="비우면 SVG 색 그대로", foreground="#888").pack(side="left", padx=8)
         r += 1
 
+        self.keep_rhythm = tk.BooleanVar(value=False)
+        self.rhythm_chk = ttk.Checkbutton(
+            opts, text="손그림 리듬 유지 (pptx 잉크 입력일 때: 그린 속도 그대로, 끄면 균일 속도)",
+            variable=self.keep_rhythm, command=self._reload_current, state="disabled")
+        self.rhythm_chk.grid(row=r, column=0, columnspan=4, sticky="w", pady=(8, 0))
+        r += 1
+
         self.split = tk.BooleanVar(value=False)
         ttk.Checkbutton(opts, text="SVG path 마다 잉크 개체를 나눠 순서대로 재생 (애니메이션 창에서 개별 조정 가능)",
-                        variable=self.split).grid(row=r, column=0, columnspan=4, sticky="w", pady=(8, 0))
+                        variable=self.split).grid(row=r, column=0, columnspan=4, sticky="w", pady=(2, 0))
         r += 1
 
         tf = ttk.Frame(opts)
@@ -196,13 +203,14 @@ class App:
     def on_drop(self, event):
         files = self.root.tk.splitlist(event.data)
         for f in files:
-            if f.lower().endswith(".svg"):
+            if f.lower().endswith((".svg", ".pptx")):
                 self.load_svg(Path(f))
                 return
-        messagebox.showwarning("SVG 아님", "SVG 파일을 놓아주세요.")
+        messagebox.showwarning("지원하지 않는 파일", "SVG 또는 pptx 파일을 놓아주세요.")
 
     def pick_svg(self):
-        f = filedialog.askopenfilename(title="SVG 선택", filetypes=[("SVG", "*.svg"), ("모든 파일", "*")])
+        f = filedialog.askopenfilename(title="SVG 또는 pptx 선택",
+                                       filetypes=[("SVG / PowerPoint 잉크", "*.svg *.pptx"), ("모든 파일", "*")])
         if f:
             self.load_svg(Path(f))
 
@@ -224,21 +232,24 @@ class App:
     # ------------------------------------------------------------------
     def load_svg(self, path: Path):
         try:
-            strokes = core.load_strokes(path, None, None)
+            strokes = core.load_strokes_any(path, None, self.keep_rhythm.get())
         except SystemExit as e:
             messagebox.showerror("변환 실패", str(e))
             return
         except Exception as e:
             messagebox.showerror("SVG 읽기 실패", f"{type(e).__name__}: {e}")
             return
+        same_file = (self.svg_path == path and set(self.order) == {st.order for st in strokes})
         self.svg_path = path
         self.strokes = strokes
         self.paths = {}
         for st in strokes:
             name, n = self.paths.get(st.order, (st.name, 0))
             self.paths[st.order] = (name, n + 1)
-        self.order = sorted(self.paths)
-        self.reversed = set()
+        if not same_file:
+            self.order = sorted(self.paths)
+            self.reversed = set()
+        self.rhythm_chk.config(state="normal" if path.suffix.lower() == ".pptx" else "disabled")
         self.fill_list()
         self.redraw_preview()
         self.drop.config(text=f"등록됨: {path.name}", bg="#E8F4EA", fg="#1E6B32")
@@ -359,6 +370,10 @@ class App:
         self._preview_img = ImageTk.PhotoImage(img)
         self.preview.config(image=self._preview_img)
 
+    def _reload_current(self):
+        if self.svg_path:
+            self.load_svg(self.svg_path)
+
     def _float_or_none(self, var, name):
         v = var.get().strip()
         if not v:
@@ -383,6 +398,7 @@ class App:
                 ease_out=float(self.ease_out.get()),
                 path_order=list(self.order),
                 reversed_paths=set(self.reversed),
+                keep_rhythm=bool(self.keep_rhythm.get()),
             )
         except ValueError as e:
             messagebox.showerror("옵션 오류", str(e))

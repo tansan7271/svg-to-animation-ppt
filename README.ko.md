@@ -18,6 +18,8 @@ GUI를 쓰면 SVG를 드롭하고, path 순서를 드래그로 바꾸고, 슬라
 
 ## 기능
 
+- **손그림 입력**: 펜으로 그린 잉크가 든 `.pptx`(아이패드 PowerPoint에서 Apple Pencil로 그린 것 등)를
+  넣으면 펜 획 하나가 path 하나로 들어옵니다. 그린 리듬을 그대로 두거나 균일 속도로 바꿀 수 있습니다.
 - **SVG 도형 전부 지원**: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`,
   변환이 걸린 그룹. 일러스트레이터에서 내보낸 SVG가 그대로 됩니다.
 - **끊긴 path** (M 명령 여러 개, 합쳐진 패스)는 획을 나눠 순서대로 그립니다.
@@ -67,6 +69,7 @@ python3 -m venv .venv
 | `--split path` | SVG path마다 잉크 개체를 나눠 순서대로 재생 | 잉크 개체 하나 |
 | `--step` | 샘플 간격 (SVG 단위, 작을수록 점이 많음) | 긴 변 / 600 |
 | `--timing` | 잉크에 기록할 점별 시각 정보: `none`, `offset`, `channel` | `channel` |
+| `--keep-rhythm` | `.pptx` 잉크 입력일 때 펜이 찍은 점을 그대로 둬서 그린 속도를 재현 | 끔 (균일 속도) |
 | `--keep-png` | 대체 PNG를 출력 옆에 남김 | 끔 |
 
 Python에서:
@@ -80,17 +83,29 @@ opt = core.ConvertOptions(duration=3, ease_in=0.2, ease_out=0.3,
 core.convert(Path("logo.svg"), Path("logo.pptx"), opt)
 ```
 
+### 아이패드 손그림 넣기
+
+1. 아이패드 PowerPoint의 그리기 탭에서 펜을 고르고 빈 슬라이드에 Apple Pencil로 그린 뒤 저장합니다.
+2. 그 `.pptx`를 SVG 대신 도구에 넣습니다.
+
+```bash
+.venv/bin/python svg_to_animation_ppt.py drawing.pptx -o out.pptx --duration 4 --keep-rhythm
+```
+
+펜 획 하나가 그리기 순서 목록의 한 줄이 되므로 SVG path처럼 순서를 바꾸거나 방향을 뒤집을 수 있습니다.
+`--keep-rhythm`을 빼면 획을 균일한 펜 속도로 다시 샘플링합니다.
+
 ## GUI (macOS)
 
 `SVG to Animation PPT.app`을 더블클릭합니다. 이 앱은 자기 위치를 기준으로 `.venv/bin/python app.py`를
 실행하므로 프로젝트 폴더 안에 있어야 합니다. 터미널에서는 `.venv/bin/python app.py`.
 
-1. 창에 SVG를 드롭합니다 (또는 클릭해서 선택).
+1. 창에 SVG 또는 펜 잉크가 든 pptx를 드롭합니다 (또는 클릭해서 선택).
 2. 미리보기에 path마다 시작점에 순서 번호, 끝점에 점이 찍힙니다.
 3. **그리기 순서** 목록에서 항목을 드래그해 순서를 바꿉니다. 하나를 고르면 그것만 강조됩니다.
    *방향 반전*은 path의 획 방향을 뒤집고, *원래대로*는 문서 순서로 되돌립니다.
 4. 시간, ease-in / ease-out (작은 그래프가 곡선을 보여줍니다), 크기, 펜 굵기, 색, 분리 모드,
-   템플릿 덱을 조절합니다.
+   템플릿 덱을 조절합니다. pptx 입력이면 *손그림 리듬 유지*로 원래 펜 속도와 균일 속도를 고릅니다.
 5. **완료**를 누르고 저장 위치를 고르면 PowerPoint로 열립니다.
 
 오류 로그는 `/tmp/svg-to-animation-ppt.log`에 남습니다.

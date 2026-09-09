@@ -19,6 +19,9 @@ Or use the GUI: drop the SVG, reorder the paths by dragging, tune the sliders, c
 
 ## Features
 
+- **Hand-drawn input**: drop a `.pptx` that contains pen ink (drawn with Apple Pencil in PowerPoint
+  for iPad, or any pen in PowerPoint) and the strokes are imported, one path per pen stroke. Keep the
+  original drawing rhythm or normalise to uniform speed.
 - **Any SVG geometry**: `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`,
   groups with transforms. Illustrator exports work out of the box.
 - **Disconnected paths** (multiple `M` commands, compound paths) become separate strokes
@@ -72,6 +75,7 @@ python3 -m venv .venv
 | `--split path` | One ink object per SVG path, played one after another | single ink object |
 | `--step` | Sampling distance in SVG units (smaller = more points) | longest side / 600 |
 | `--timing` | Per-point timing info written into the ink: `none`, `offset`, `channel` | `channel` |
+| `--keep-rhythm` | For `.pptx` ink input: keep the pen's original sample points so the replay reproduces how fast you drew | off (uniform speed) |
 | `--keep-png` | Keep the fallback PNG next to the output | off |
 
 From Python:
@@ -85,17 +89,30 @@ opt = core.ConvertOptions(duration=3, ease_in=0.2, ease_out=0.3,
 core.convert(Path("logo.svg"), Path("logo.pptx"), opt)
 ```
 
+### Hand-drawn input from an iPad
+
+1. Open PowerPoint on the iPad, Draw tab, pick a pen, draw with the Apple Pencil on a blank slide, save.
+2. Feed that `.pptx` to the tool instead of an SVG:
+
+```bash
+.venv/bin/python svg_to_animation_ppt.py drawing.pptx -o out.pptx --duration 4 --keep-rhythm
+```
+
+Each pen stroke becomes one entry in the drawing-order list, so you can reorder or reverse them like SVG paths.
+Without `--keep-rhythm` the strokes are resampled to a uniform pen speed.
+
 ## GUI (macOS)
 
 Double-click `SVG to Animation PPT.app`. It must stay inside the project folder because it launches
 `.venv/bin/python app.py` relative to itself. From a terminal: `.venv/bin/python app.py`.
 
-1. Drop an SVG on the window (or click to browse).
+1. Drop an SVG, or a pptx with pen ink, on the window (or click to browse).
 2. The preview shows every path with its order number at the start point and a dot at the end.
 3. Drag entries in the **Drawing order** list to reorder. Select one to highlight it.
    *Reverse* flips a path's direction, *Reset* restores document order.
 4. Adjust duration, ease-in / ease-out (the little graph shows the curve), size, pen width,
-   colour, split mode, template deck.
+   colour, split mode, template deck. For pptx input, *Keep drawing rhythm* toggles between the original
+   pen timing and uniform speed.
 5. Click **Done**, choose where to save, and the deck opens in PowerPoint.
 
 Errors are logged to `/tmp/svg-to-animation-ppt.log`.

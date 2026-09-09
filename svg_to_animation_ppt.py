@@ -15,6 +15,7 @@ import argparse
 import copy
 import datetime as _dt
 import math
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -143,6 +144,177 @@ def load_strokes(svg_file: Path, step_units: float | None, default_width_units: 
     if not strokes:
         sys.exit("SVG에서 그릴 수 있는 path/도형을 찾지 못했어요.")
     return strokes
+
+
+# ----------------------------------------------------------------------------
+# 1b. pptx 잉크 -> 획 리스트  (아이패드/펜으로 그린 PowerPoint 잉크 불러오기)
+# ----------------------------------------------------------------------------
+_INKML = "http://www.w3.org/2003/InkML"
+_TOK = re.compile(r"([\'\"!]?)\s*(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)")
+
+
+def _decode_trace(text: str, n_channels: int) -> list[list[float]]:
+    """InkML trace 본문 해석. ' = 1차 차분, \" = 2차 차분, ! = 절대값. 접두어는 채널별로 유지된다."""
+    samples = [x.strip() for x in text.split(",") if x.strip()]
+    mode = [None] * n_channels
+    val = [0.0] * n_channels
+    dif = [0.0] * n_channels
+    out = []
+    for smp in samples:
+        parts = _TOK.findall(smp)
+        if len(parts) < n_channels:
+            continue
+        cur = []
+        for k in range(n_channels):
+            pre, num = parts[k]
+            num = float(num)
+            if pre == "'":
+                mode[k] = "d1"
+            elif pre == '"':
+                mode[k] = "d2"
+            elif pre == "!":
+                mode[k] = None
+            if mode[k] is None:
+                val[k] = num
+                dif[k] = 0.0
+            elif mode[k] == "d1":
+                dif[k] = num
+                val[k] += dif[k]
+            else:
+                dif[k] += num
+                val[k] += dif[k]
+            cur.append(val[k])
+        out.append(cur)
+    return out
+
+
+def _parse_inkml(blob: bytes) -> list[dict]:
+    """InkML 파트 하나 -> [{points(cm), width_cm, color}] (trace 순서대로)."""
+    root = etree.fromstring(blob)
+    ns = {"i": _INKML}
+    chans = [c.get("name") for c in root.findall(".//i:traceFormat/i:channel", ns)]
+    if not chans:
+        chans = ["X", "Y"]
+    res = {}
+    for cp in root.findall(".//i:channelProperty", ns):
+        if cp.get("name") == "resolution":
+            try:
+                res[cp.get("channel")] = float(cp.get("value"))
+            except (TypeError, ValueError):
+                pass
+    units = {c.get("name"): c.get("units") for c in root.findall(".//i:traceFormat/i:channel", ns)}
+
+    def to_cm(v: float, ch: str) -> float:
+        r = res.get(ch, 1.0) or 1.0
+        u = (units.get(ch) or "cm").lower()
+        v = v / r
+        if u in ("cm",):
+            return v
+        if u in ("mm",):
+            return v / 10
+        if u in ("in", "inch"):
+            return v * 2.54
+        if u in ("himetric",):
+            return v / 1000
+        return v  # dev 등: 그대로 (pptx 는 cm 가 표준)
+
+    brushes = {}
+    for b in root.findall(".//i:brush", ns):
+        bid = b.get("{http://www.w3.org/XML/1998/namespace}id")
+        props = {bp.get("name"): (bp.get("value"), bp.get("units")) for bp in b.findall("i:brushProperty", ns)}
+        w = 0.035
+        if "width" in props:
+            try:
+                w = float(props["width"][0])
+                if (props["width"][1] or "cm") == "mm":
+                    w /= 10
+            except ValueError:
+                pass
+        color = "#000000"
+        if "color" in props and props["color"][0]:
+            c = props["color"][0].strip()
+            if re.fullmatch(r"#[0-9A-Fa-f]{6}", c):
+                color = c.upper()
+        brushes[bid] = (w, color)
+
+    xi, yi = chans.index("X"), chans.index("Y")
+    out = []
+    for tr in root.findall(".//i:trace", ns):
+        rows = _decode_trace(tr.text or "", len(chans))
+        if len(rows) < 2:
+            continue
+        bid = (tr.get("brushRef") or "").lstrip("#")
+        w, color = brushes.get(bid, (0.035, "#000000"))
+        pts = [(to_cm(r[xi], "X"), to_cm(r[yi], "Y")) for r in rows]
+        out.append({"points": pts, "width_cm": w, "color": color})
+    return out
+
+
+def resample_polyline(points: list[tuple[float, float]], step: float) -> list[tuple[float, float]]:
+    """폴리라인을 호 길이 기준 step 간격으로 다시 샘플링 (균일 속도용)."""
+    if len(points) < 2 or step <= 0:
+        return list(points)
+    out = [points[0]]
+    carry = 0.0
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        seg = math.hypot(x1 - x0, y1 - y0)
+        if seg == 0:
+            continue
+        d = step - carry
+        while d <= seg:
+            t = d / seg
+            out.append((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t))
+            d += step
+        carry = seg - (d - step)
+    if out[-1] != points[-1]:
+        out.append(points[-1])
+    return out
+
+
+def load_strokes_pptx(pptx_file: Path, step_units: float | None = None, keep_rhythm: bool = False,
+                      slide_index: int | None = None) -> list[Stroke]:
+    """pptx 안의 잉크 개체를 획으로 읽는다. 좌표 단위는 1/1000 cm (SVG 의 user unit 역할).
+    keep_rhythm=True 면 펜이 찍은 점을 그대로 둬서 그린 속도가 재생에 반영된다."""
+    prs = Presentation(str(pptx_file))
+    slides = list(prs.slides)
+    if slide_index is not None:
+        slides = [slides[slide_index]]
+    strokes: list[Stroke] = []
+    order = 0
+    U = 1000.0  # cm -> 단위
+    for slide in slides:
+        sld = slide._element
+        for cp in sld.iter("{%s}contentPart" % NS["p"]):
+            rid = cp.get("{%s}id" % NS["r"])
+            if not rid or rid not in slide.part.rels:
+                continue
+            part = slide.part.rels[rid].target_part
+            if "inkml" not in (part.content_type or ""):
+                continue
+            off = cp.find("{%s}xfrm/{%s}off" % (NS["p14"], NS["a"]))
+            ox = int(off.get("x")) / EMU_PER_CM * U if off is not None else 0.0
+            oy = int(off.get("y")) / EMU_PER_CM * U if off is not None else 0.0
+            for tr in _parse_inkml(part.blob):
+                pts = [(ox + x * U, oy + y * U) for x, y in tr["points"]]
+                strokes.append(Stroke(points=pts, color=tr["color"], width=tr["width_cm"] * U,
+                                      order=order, name=f"stroke {order + 1}"))
+                order += 1
+    if not strokes:
+        sys.exit("pptx 에서 잉크(펜 그림)를 찾지 못했어요.")
+    if not keep_rhythm:
+        xs = [x for st in strokes for x, _ in st.points]
+        ys = [y for st in strokes for _, y in st.points]
+        span = max(max(xs) - min(xs), max(ys) - min(ys), 1e-9)
+        step = step_units if step_units else span / 600.0
+        for st in strokes:
+            st.points = resample_polyline(st.points, step)
+    return strokes
+
+
+def load_strokes_any(file: Path, step_units: float | None = None, keep_rhythm: bool = False) -> list[Stroke]:
+    if file.suffix.lower() == ".pptx":
+        return load_strokes_pptx(file, step_units, keep_rhythm)
+    return load_strokes(file, step_units, None)
 
 
 def apply_order(strokes: list[Stroke], path_order: list[int] | None,
@@ -537,6 +709,7 @@ class ConvertOptions:
     ease_out: float = 0.0
     ease_mode: str = "keyframes"
     timing: str = "channel"
+    keep_rhythm: bool = False                # pptx 잉크 입력: 펜 점을 그대로 둬 그린 속도 유지
     path_order: list[int] | None = None      # path 재생 순서 (원래 order 번호 목록)
     reversed_paths: set[int] | None = None   # 방향 뒤집을 path (원래 order 번호)
 
@@ -551,7 +724,7 @@ class ConvertResult:
 
 
 def convert(svg_file: Path, out: Path, opt: ConvertOptions) -> ConvertResult:
-    """SVG -> pptx 변환 본체. CLI 와 GUI 가 공용으로 쓴다."""
+    """SVG(또는 잉크가 든 pptx) -> pptx 변환 본체. CLI 와 GUI 가 공용으로 쓴다."""
     if opt.template:
         prs = Presentation(str(opt.template))
     else:
@@ -566,7 +739,7 @@ def convert(svg_file: Path, out: Path, opt: ConvertOptions) -> ConvertResult:
     width_cm = opt.width_cm or slide_w_cm * 0.6
     height_cm = opt.height_cm or slide_h_cm * 0.8
 
-    strokes = load_strokes(svg_file, opt.step, None)
+    strokes = load_strokes_any(svg_file, opt.step, opt.keep_rhythm)
     if opt.path_order or opt.reversed_paths:
         strokes = apply_order(strokes, opt.path_order, opt.reversed_paths)
 
@@ -616,7 +789,7 @@ def convert(svg_file: Path, out: Path, opt: ConvertOptions) -> ConvertResult:
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="SVG -> PowerPoint 잉크 재생 애니메이션")
-    ap.add_argument("svg", type=Path)
+    ap.add_argument("svg", type=Path, help="입력 SVG, 또는 펜으로 그린 잉크가 든 pptx")
     ap.add_argument("-o", "--output", type=Path, help="출력 pptx (기본: svg 이름.pptx)")
     ap.add_argument("--template", type=Path, help="기존 pptx 를 바탕으로 마지막에 슬라이드 추가")
     ap.add_argument("--width-cm", type=float, default=None, help="로고 가로 크기 cm (기본: 슬라이드 폭의 60%%)")
@@ -628,6 +801,8 @@ def main(argv=None):
     ap.add_argument("--split", choices=["none", "path"], default="none",
                     help="path: SVG의 path 마다 잉크 개체를 나눠 순서대로 재생")
     ap.add_argument("--keep-png", action="store_true", help="미리보기 PNG 를 남긴다")
+    ap.add_argument("--keep-rhythm", action="store_true",
+                    help="pptx 잉크 입력일 때 펜이 찍은 점을 그대로 둬서 그린 속도를 재현")
     ap.add_argument("--ease-in", type=float, default=0.0,
                     help="부드럽게 시작: 전체 시간 중 가속 구간 비율 0~1 (예 0.3)")
     ap.add_argument("--ease-out", type=float, default=0.0,
@@ -643,7 +818,7 @@ def main(argv=None):
                          duration=args.duration, stroke_width=args.stroke_width, color=args.color,
                          step=args.step, split=args.split, keep_png=args.keep_png,
                          ease_in=args.ease_in, ease_out=args.ease_out, ease_mode=args.ease_mode,
-                         timing=args.timing)
+                         timing=args.timing, keep_rhythm=args.keep_rhythm)
     r = convert(args.svg, out, opt)
     print(f"완료: {r.output}  (잉크 개체 {r.ink_objects}개, 획 {r.strokes}개, "
           f"{r.width_cm:.2f} x {r.height_cm:.2f} cm, {args.duration}s)")
